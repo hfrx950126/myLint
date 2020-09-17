@@ -1,4 +1,4 @@
-package com.example.lib
+package com.example.lib.detector
 
 import com.android.tools.lint.detector.api.*
 import com.intellij.psi.PsiClassType

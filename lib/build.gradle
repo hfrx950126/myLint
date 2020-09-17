@@ -6,6 +6,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'com.android.tools.lint:lint-api:27.0.1'
     implementation 'com.android.tools.lint:lint-checks:27.0.1'
+    testImplementation 'com.android.tools.lint:lint:27.0.1'
+    testImplementation 'com.android.tools.lint:lint-tests:27.0.1'
+    testImplementation 'com.android.tools:testutils:27.0.1'
 }
 
 sourceCompatibility = "1.7"

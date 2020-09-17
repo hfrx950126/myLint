@@ -1,11 +1,8 @@
-package com.example.lib;
+package com.example.lib.detector;
 
 import com.android.tools.lint.detector.api.*
-import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiMethodCallExpression
 import org.jetbrains.uast.UCallExpression
-import java.util.*
 
 public class LogDetector : Detector(), Detector.UastScanner {
     companion object {
