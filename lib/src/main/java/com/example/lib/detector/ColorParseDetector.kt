@@ -1,13 +1,14 @@
 package com.example.lib.detector;
 
+import com.android.tools.lint.client.api.UElementHandler
 import com.android.tools.lint.detector.api.*
+import com.example.lib.detector.LineEx.getQualifiedName
 import com.intellij.lang.java.parser.JavaParser
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
-import org.jetbrains.uast.UCallExpression
-import org.jetbrains.uast.UastLanguagePlugin
+import org.jetbrains.uast.*
 import org.jline.builtins.Completers.TreeCompleter.node
 
 
@@ -29,31 +30,63 @@ class ColorParseDetector : Detector(), Detector.UastScanner {
         )
     }
 
-    override fun getApplicableMethodNames(): List<String>? {
-        return listOf("parseColor")
+    override fun getApplicableUastTypes(): List<Class<out UElement>>? {
+        return listOf(UCallExpression::class.java)
     }
 
+    override fun createUastHandler(context: JavaContext): UElementHandler? {
+        return object : UElementHandler() {
 
-    override fun visitMethod(
-        context: JavaContext,
-        visitor: JavaElementVisitor?,
-        call: PsiMethodCallExpression,
-        method: PsiMethod
-    ) {
-        val psiClass: PsiClass? = method.containingClass
-
-        val isSubClass: Boolean = false
-
-    }
-
-
-    override fun visitMethodCall(context: JavaContext, node: UCallExpression, method: PsiMethod) {
-        if (context.evaluator.isMemberInClass(method, "android.graphics.Color")) {
-            context.report(
-                ISSUE, node, context.getLocation(node),
-                "Color.parseColor需要try-catch处理IllegalArgumentException"
-            )
-
+            override fun visitCallExpression(node: UCallExpression) {
+                checkMethod(context, node)
+            }
         }
     }
+
+    private fun checkMethod(context: JavaContext, node: UCallExpression) {
+        if (LintMatcher.match(
+                "android.graphics.Color.parseColor",
+                "",
+                node.getQualifiedName(),
+                node.getContainingUClass()?.qualifiedName, null, null
+            )
+        ) {
+            val tryExpression: UTryExpression? =
+                node.getParentOfType(UTryExpression::class.java)//获取try节点
+
+            if (tryExpression == null) {
+                context.report(
+                    ColorParseDetector.ISSUE,
+                    node,
+                    context.getLocation(node),
+                    ColorParseDetector.REPORT_MESSAGE
+                )
+                return
+            }
+            for (catch in tryExpression.catchClauses) {//拿到catch
+                for (reference in catch.typeReferences) {//拿到异常类型
+                    if (context.evaluator.typeMatches(
+                            reference.type,
+                            "java.lang.IllegalArgumentException"
+                        )//同一个异常
+                        || context.evaluator.extendsClass(
+                            context.evaluator.findClass("java.lang.IllegalArgumentException"),
+                            reference.getQualifiedName()!!,
+                            true
+                        )//try的是异常的父类
+                    ) {
+                        return
+                    }
+                }
+            }
+            context.report(
+                ColorParseDetector.ISSUE,
+                node,
+                context.getLocation(node),
+                ColorParseDetector.REPORT_MESSAGE
+            )
+        }
+
+    }
+
 }
